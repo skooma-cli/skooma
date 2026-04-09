@@ -1,5 +1,6 @@
 # 🧪 Skooma
 
+![Release Version](https://img.shields.io/github/v/release/mark-rodgers/skooma)
 ![Go Version](https://img.shields.io/badge/Go-1.26.1%2B-00ADD8?logo=go&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -132,5 +133,5 @@ The output binary lands in `bin/`.
 ---
 
 <p align="center">
-  <img height="300" src="cmd/templates/frontend/public/khajit.webp">
+  <img height="300" src="cmd/templates/frontend/public/khajiit.webp">
 </p>

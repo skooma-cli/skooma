@@ -12,6 +12,7 @@ var rootCmd = &cobra.Command{
 	Long:  `Skooma is a CLI tool to scaffold new projects with a touch of Khajiit flair.`,
 }
 
+// Execute runs the root command, which is the entry point for the CLI application.
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {

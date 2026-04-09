@@ -1,3 +1,9 @@
+// brew.go defines the "brew" command for the Skooma CLI, which scaffolds a new
+// fullstack project with Go, TypeScript, React, Tailwind, and Vite.
+// It collects user input for project details, creates the necessary directory
+// structure, and generates files based on embedded templates. The command also
+// includes a fun brewing message and a spinner to enhance the user experience
+// while the project is being set up.
 package cmd
 
 import (
@@ -18,6 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ProjectData holds the data collected from the user to populate the project templates.
 type ProjectData struct {
 	Name     string
 	RootDir  string
@@ -37,6 +44,7 @@ var project = ProjectData{
 //go:embed templates/*
 var templateFS embed.FS
 
+// getRandomBrewMessage returns a random message to display while brewing the project.
 func getRandomBrewMessage() string {
 	messages := []string{
 		"🧪 This one is brewing a fresh batch of Skooma...",
@@ -163,6 +171,7 @@ var brewCmd = &cobra.Command{
 	},
 }
 
+// init registers the brew command and its flags with the root command.
 func init() {
 	rootCmd.AddCommand(brewCmd)
 	brewCmd.Flags().StringVarP(&project.RepoURL, "repo", "r", "", "Repository URL (e.g., github.com/username/repo)")
@@ -170,20 +179,18 @@ func init() {
 	brewCmd.Flags().StringVarP(&project.Database, "database", "d", "", "Database type (\"file\", \"mssql\", \"postgres\")")
 }
 
+// scaffoldProject creates the project directory structure and generates files based on templates.
 func scaffoldProject() error {
-	// Create project root directory and root-level files
 	err := createProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to brew project: %w", err)
 	}
 
-	// Scaffold backend
 	err = createBackend()
 	if err != nil {
 		return fmt.Errorf("failed to brew project: %w", err)
 	}
 
-	// Scaffold frontend
 	err = createFrontend()
 	if err != nil {
 		return fmt.Errorf("failed to brew project: %w", err)
@@ -191,13 +198,14 @@ func scaffoldProject() error {
 	return nil
 }
 
+// createProjectRoot creates the root project directory and processes root-level templates.
 func createProjectRoot() error {
 	projectRoot := project.RootDir
 
-	// Create project directory
+	// Create project root directory
 	err := os.Mkdir(projectRoot, 0755)
 	if err != nil {
-		return fmt.Errorf("failed to create project directory: %w", err)
+		return fmt.Errorf("failed to create project root directory: %w", err)
 	}
 
 	// Process root-level templates
@@ -208,12 +216,12 @@ func createProjectRoot() error {
 	return nil
 }
 
+// createBackend creates the backend directory and generates files based on templates.
 func createBackend() error {
-	// Create backend directory
 	backendPath := filepath.Join(project.RootDir, "backend")
 	err := os.Mkdir(backendPath, 0755)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create backend directory: %w", err)
 	}
 
 	// Process backend templates
@@ -227,26 +235,25 @@ func createBackend() error {
 
 	for _, tmpl := range templates {
 		if err := processTemplate(tmpl.src, tmpl.dst); err != nil {
-			return err
+			return fmt.Errorf("failed to process template %s: %w", tmpl.src, err)
 		}
 	}
 	return nil
 }
 
+// createFrontend creates the frontend directory, subdirectories, and generates files based on templates.
 func createFrontend() error {
-	// Create frontend directory
 	frontendPath := filepath.Join(project.RootDir, "frontend")
 	err := os.Mkdir(frontendPath, 0755)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create frontend directory: %w", err)
 	}
 
-	// Create frontend subdirectories
 	subdirs := []string{"src", "src/assets", "public"}
 	for _, subdir := range subdirs {
 		err := os.Mkdir(filepath.Join(frontendPath, subdir), 0755)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create frontend subdirectory %s: %w", subdir, err)
 		}
 	}
 
@@ -256,16 +263,11 @@ func createFrontend() error {
 	}{
 		// Public directory static files
 		{"templates/frontend/public/favicon.svg", filepath.Join(frontendPath, "public", "favicon.svg")},
-		{"templates/frontend/public/khajit.webp", filepath.Join(frontendPath, "public", "khajit.webp")},
-
-		// Source directory static files
-		// {"templates/frontend/src/assets/hero.png", filepath.Join(frontendPath, "src", "assets", "hero.png")},
-		// {"templates/frontend/src/assets/react.svg", filepath.Join(frontendPath, "src", "assets", "react.svg")},
-		// {"templates/frontend/src/assets/vite.svg", filepath.Join(frontendPath, "src", "assets", "vite.svg")},
+		{"templates/frontend/public/khajiit.webp", filepath.Join(frontendPath, "public", "khajiit.webp")},
 	}
 	for _, file := range staticFiles {
 		if err := copyFile(file.src, file.dst); err != nil {
-			return err
+			return fmt.Errorf("failed to copy static file %s: %w", file.src, err)
 		}
 	}
 
@@ -273,7 +275,6 @@ func createFrontend() error {
 	templates := []struct {
 		src, dst string
 	}{
-		// Root-level frontend templates
 		{"templates/frontend/gitignore.tmpl", filepath.Join(frontendPath, ".gitignore")},
 		{"templates/frontend/eslint.config.js.tmpl", filepath.Join(frontendPath, "eslint.config.js")},
 		{"templates/frontend/index.html.tmpl", filepath.Join(frontendPath, "index.html")},
@@ -283,8 +284,6 @@ func createFrontend() error {
 		{"templates/frontend/tsconfig.app.json.tmpl", filepath.Join(frontendPath, "tsconfig.app.json")},
 		{"templates/frontend/tsconfig.node.json.tmpl", filepath.Join(frontendPath, "tsconfig.node.json")},
 		{"templates/frontend/vite.config.ts.tmpl", filepath.Join(frontendPath, "vite.config.ts")},
-
-		// Source directory templates
 		{"templates/frontend/src/App.css.tmpl", filepath.Join(frontendPath, "src", "App.css")},
 		{"templates/frontend/src/App.tsx.tmpl", filepath.Join(frontendPath, "src", "App.tsx")},
 		{"templates/frontend/src/index.css.tmpl", filepath.Join(frontendPath, "src", "index.css")},
@@ -293,12 +292,13 @@ func createFrontend() error {
 
 	for _, tmpl := range templates {
 		if err := processTemplate(tmpl.src, tmpl.dst); err != nil {
-			return err
+			return fmt.Errorf("failed to process template %s: %w", tmpl.src, err)
 		}
 	}
 	return nil
 }
 
+// copyFile reads a file from the embedded filesystem and writes it to the specified destination path.
 func copyFile(src, dst string) error {
 	// Read file content from embedded filesystem
 	content, err := templateFS.ReadFile(src)
@@ -314,6 +314,7 @@ func copyFile(src, dst string) error {
 	return nil
 }
 
+// processTemplate reads a template from the embedded filesystem, executes it with the project data, and writes the output to the specified path.
 func processTemplate(templatePath, outputPath string) error {
 	// Read template from embedded filesystem
 	content, err := templateFS.ReadFile(templatePath)
@@ -335,5 +336,8 @@ func processTemplate(templatePath, outputPath string) error {
 	defer outputFile.Close()
 
 	// Execute template with data
-	return tmpl.Execute(outputFile, project)
+	if err := tmpl.Execute(outputFile, project); err != nil {
+		return fmt.Errorf("failed to execute template %s: %w", templatePath, err)
+	}
+	return nil
 }
