@@ -1,6 +1,6 @@
 # 🧪 Skooma
 
-![Release Version](https://img.shields.io/github/v/release/mark-rodgers/skooma)
+![Release Version](https://img.shields.io/github/v/release/mark-rodgers/skooma?include_prereleases)
 ![Go Version](https://img.shields.io/badge/Go-1.26.1%2B-00ADD8?logo=go&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
