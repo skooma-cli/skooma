@@ -25,9 +25,10 @@ var templateCmd = &cobra.Command{
 }
 
 var lsCmd = &cobra.Command{
-	Use:   "ls",
-	Short: "List available templates",
-	Long:  `List all available templates that can be used with the brew command.`,
+	Use:     "ls",
+	Short:   "List available templates",
+	Long:    `List all available templates that can be used with the brew command.`,
+	Aliases: []string{"list"},
 	Run: func(cmd *cobra.Command, args []string) {
 		templates, err := templates.GetTemplates()
 		if err != nil {
@@ -129,11 +130,11 @@ var addCmd = &cobra.Command{
 }
 
 var rmCmd = &cobra.Command{
-	Use:   "rm TEMPLATE_NAME",
-	Short: "Remove a template",
-	Long:  `Remove an existing template from the available templates.`,
-	Args:  cobra.ExactArgs(1),
-
+	Use:     "rm TEMPLATE_NAME",
+	Short:   "Remove a template",
+	Long:    `Remove an existing template from the available templates.`,
+	Args:    cobra.ExactArgs(1),
+	Aliases: []string{"remove"},
 	Run: func(cmd *cobra.Command, args []string) {
 		templateName := args[0]
 
