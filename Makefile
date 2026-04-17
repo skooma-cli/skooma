@@ -20,7 +20,7 @@ install:
 # Watch .go files and rebuild + install on changes
 dev:
 	@watchexec --version > $(NULL_DEVICE) 2>&1 || (echo Please install watchexec first: https://github.com/watchexec/watchexec && exit 1)
-	@echo "Watching .go files for changes. Press Ctrl+C to stop."
+	@echo Watching .go files for changes. Press Ctrl+C to stop.
 	watchexec -e go -r "make --no-print-directory build && go install ."
 
 # Same as dev but with verbose output showing which files changed
