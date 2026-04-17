@@ -1,3 +1,4 @@
+// Package utils provides utility functions for the Skooma application.
 package utils
 
 import "math/rand"
