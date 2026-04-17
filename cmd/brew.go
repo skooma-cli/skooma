@@ -1,37 +1,26 @@
 package cmd
 
 import (
-	"embed"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
-	"text/template"
 	"time"
 
 	"charm.land/huh/v2"
 	"github.com/briandowns/spinner"
+	"github.com/skooma-cli/skooma/internal/sanitize"
 	"github.com/skooma-cli/skooma/internal/templates"
 	"github.com/skooma-cli/skooma/internal/types"
+	"github.com/skooma-cli/skooma/internal/validators"
 	"github.com/spf13/cobra"
 )
 
-// ProjectData holds the data collected from the user to populate the project templates.
-type ProjectData struct {
-	Name         string
-	RootDir      string
-	TemplateName string
-	Template     types.Template
-	Database     string
-	RepoURL      string
-	Author       string
-}
-
-var project = ProjectData{
+// TODO: declared this in the brewCmd function and passed to the template functions instead of being a global variable
+// this is just adding junk to the global namespace and makes it harder to track where it's being modified
+var brewProject = types.ProjectData{
 	Name:         "",
 	RootDir:      "",
 	TemplateName: "",
@@ -40,9 +29,6 @@ var project = ProjectData{
 	RepoURL:      "",
 	Author:       "",
 }
-
-//go:embed templates/*
-var templateFS embed.FS
 
 // getRandomBrewMessage returns a random message to display while brewing the project.
 func getRandomBrewMessage() string {
@@ -68,7 +54,7 @@ the necessary files for a basic project structure.`,
 		fmt.Printf("%s\n\n", getRandomBrewMessage())
 
 		if len(args) > 0 {
-			project.Name = args[0]
+			brewProject.Name = args[0]
 		}
 
 		templates, err := templates.GetTemplates()
@@ -87,62 +73,49 @@ the necessary files for a basic project structure.`,
 			huh.NewGroup(
 				huh.NewInput().
 					Title("Project name:").
-					Value(&project.Name).
-					Validate(func(str string) error {
-						// Check if empty
-						if strings.TrimSpace(str) == "" {
-							return errors.New("Project name can't be empty")
-						}
-						// Check for spaces
-						if strings.Contains(str, " ") {
-							return errors.New("Project name can't contain spaces")
-						}
-						// Check for underscores
-						if strings.Contains(str, "_") {
-							return errors.New("Project name can't contain underscores")
-						}
-						return nil
-					}),
+					Value(&brewProject.Name).
+					Validate(validators.All(
+						validators.NotEmpty("Project name"),
+						validators.NoSpaces("Project name"),
+						validators.NoUnderscores("Project name"),
+					)),
 				huh.NewSelect[string]().
 					Title("Template").
 					Options(templateOptions...).
-					Value(&project.TemplateName),
+					Value(&brewProject.TemplateName),
 				huh.NewInput().
-					Title("Repository URL (e.g., github.com/username/repo):").
-					Value(&project.RepoURL).
-					Validate(func(str string) error {
-						// Check for spaces
-						if strings.Contains(str, " ") {
-							return errors.New("Repository URL can't contain spaces")
-						}
-						// Check for http:// or https://
-						if strings.HasPrefix(str, "http://") || strings.HasPrefix(str, "https://") {
-							return errors.New("Repository URL can't contain http:// or https://")
-						}
-						return nil
-					}),
+					Title("Repository URL (e.g., github.com/user/repo):").
+					Value(&brewProject.RepoURL).
+					Validate(validators.AllowEmpty(
+						validators.NoSpaces("Repository URL"),
+						validators.ValidURL("Repository URL"),
+					)),
 				huh.NewInput().
-					Title("Author name (e.g., John Doe <john.doe@example.com>):").
-					Value(&project.Author).
-					Validate(func(str string) error {
-						// If author name is provided, enforce the format "Name <email>" via regex
-						if strings.TrimSpace(str) != "" {
-							pattern := `^[^<>]+ <[^@\s]+@[^@\s]+\.[^@\s]+>$`
-							matched, err := regexp.MatchString(pattern, str)
-							if err != nil || !matched {
-								return errors.New("Author must be in format: Name <email@domain.com>")
-							}
-						}
-						return nil
-					}),
+					Title("Author name (e.g., Name <email@example.com>):").
+					Value(&brewProject.Author).
+					Validate(validators.AllowEmpty(validators.RFC5322Address("Author"))),
 				huh.NewSelect[string]().
 					Title("Database").
 					Options(
 						huh.NewOption("Flat File", "file"),
-						huh.NewOption("Microsoft SQL", "mssql"),
+						huh.NewOption("Microsoft SQL Server", "mssql"),
 						huh.NewOption("PostgreSQL", "postgres"),
 					).
-					Value(&project.Database),
+					Value(&brewProject.Database),
+				// TODO: remove test inputs
+				huh.NewInput().
+					Title("[TEST] Required URL:").
+					Validate(validators.All(
+						validators.NotEmpty("Required URL"),
+						validators.NoSpaces("Required URL"),
+						validators.ValidURL("Required URL"),
+					)),
+				huh.NewInput().
+					Title("[TEST] Optional URL:").
+					Validate(validators.AllowEmpty(
+						validators.NoSpaces("Optional URL"),
+						validators.ValidURL("Optional URL"),
+					)),
 			),
 		)
 
@@ -151,20 +124,26 @@ the necessary files for a basic project structure.`,
 			log.Fatal(err)
 		}
 
+		brewProject.RepoURL = sanitize.StripHTTPPrefix(brewProject.RepoURL)
+
 		// Get the selected template object
-		project.Template = templates[project.TemplateName]
+		brewProject.Template = templates[brewProject.TemplateName]
 
 		// Get current working directory
 		cwd, err := os.Getwd()
 		if err != nil {
 			log.Fatalf("❌ Failed to get current working directory: %v\n", err)
 		}
-		project.RootDir = filepath.Join(cwd, project.Name)
+		brewProject.RootDir = filepath.Join(cwd, brewProject.Name)
 
 		// Early return if project directory already exists
-		if _, err := os.Stat(project.RootDir); !os.IsNotExist(err) {
-			log.Fatalf("❌ Directory '%s' already exists\n", project.RootDir)
+		if _, err := os.Stat(brewProject.RootDir); !os.IsNotExist(err) {
+			log.Fatalf("❌ Directory '%s' already exists\n", brewProject.RootDir)
 		}
+
+		debugJSON, _ := json.MarshalIndent(brewProject, "", "  ")
+		fmt.Println(string(debugJSON))
+		os.Exit(-1) // temporary exit to skip the actual brewing process while we work on the form and validation
 
 		// Start brewing spinner
 		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
@@ -181,13 +160,13 @@ the necessary files for a basic project structure.`,
 		time.Sleep(2 * time.Second)
 
 		s.Stop()
-		fmt.Printf("\n✅ '%s' has finished brewing!\n\n", project.Name)
+		fmt.Printf("\n✅ '%s' has finished brewing!\n\n", brewProject.Name)
 
 		// Print project details
-		fmt.Printf("Directory: %s\n", project.RootDir)
-		fmt.Printf("Repository: https://%s\n", project.RepoURL)
-		if project.Author != "" {
-			fmt.Printf("Author: %s\n", project.Author)
+		fmt.Printf("Directory: %s\n", brewProject.RootDir)
+		fmt.Printf("Repository: https://%s\n", brewProject.RepoURL)
+		if brewProject.Author != "" {
+			fmt.Printf("Author: %s\n", brewProject.Author)
 		}
 	},
 }
@@ -195,10 +174,10 @@ the necessary files for a basic project structure.`,
 // init registers the brew command and its flags with the root command.
 func init() {
 	rootCmd.AddCommand(brewCmd)
-	brewCmd.Flags().StringVarP(&project.TemplateName, "template", "t", "", "Template name")
-	brewCmd.Flags().StringVarP(&project.Database, "database", "d", "", "Database type (\"file\", \"mssql\", \"postgres\")")
-	brewCmd.Flags().StringVarP(&project.RepoURL, "repo", "r", "", "Repository URL (e.g., github.com/username/repo)")
-	brewCmd.Flags().StringVarP(&project.Author, "author", "a", "", "Author name")
+	brewCmd.Flags().StringVarP(&brewProject.TemplateName, "template", "t", "", "Template name")
+	brewCmd.Flags().StringVarP(&brewProject.Database, "database", "d", "", "Database type (\"file\", \"mssql\", \"postgres\")")
+	brewCmd.Flags().StringVarP(&brewProject.RepoURL, "repo", "r", "", "Repository URL (e.g., github.com/user/repo)")
+	brewCmd.Flags().StringVarP(&brewProject.Author, "author", "a", "", "Author name")
 }
 
 // scaffoldProject creates the project directory structure and generates files based on templates.
@@ -222,7 +201,7 @@ func scaffoldProject() error {
 
 // createProjectRoot creates the root project directory and processes root-level templates.
 func createProjectRoot() error {
-	projectRoot := project.RootDir
+	projectRoot := brewProject.RootDir
 
 	// Create project root directory
 	err := os.Mkdir(projectRoot, 0755)
@@ -240,7 +219,7 @@ func createProjectRoot() error {
 
 // createBackend creates the backend directory and generates files based on templates.
 func createBackend() error {
-	backendPath := filepath.Join(project.RootDir, "backend")
+	backendPath := filepath.Join(brewProject.RootDir, "backend")
 	err := os.Mkdir(backendPath, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create backend directory: %w", err)
@@ -265,7 +244,7 @@ func createBackend() error {
 
 // createFrontend creates the frontend directory, subdirectories, and generates files based on templates.
 func createFrontend() error {
-	frontendPath := filepath.Join(project.RootDir, "frontend")
+	frontendPath := filepath.Join(brewProject.RootDir, "frontend")
 	err := os.Mkdir(frontendPath, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create frontend directory: %w", err)
@@ -322,44 +301,44 @@ func createFrontend() error {
 
 // copyFile reads a file from the embedded filesystem and writes it to the specified destination path.
 func copyFile(src, dst string) error {
-	// Read file content from embedded filesystem
-	content, err := templateFS.ReadFile(src)
-	if err != nil {
-		return fmt.Errorf("failed to read file %s: %w", src, err)
-	}
+	// // Read file content from embedded filesystem
+	// content, err := templateFS.ReadFile(src)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to read file %s: %w", src, err)
+	// }
 
-	// Write content to destination path
-	err = os.WriteFile(dst, content, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write file %s: %w", dst, err)
-	}
+	// // Write content to destination path
+	// err = os.WriteFile(dst, content, 0644)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to write file %s: %w", dst, err)
+	// }
 	return nil
 }
 
 // processTemplate reads a template from the embedded filesystem, executes it with the project data, and writes the output to the specified path.
 func processTemplate(templatePath, outputPath string) error {
-	// Read template from embedded filesystem
-	content, err := templateFS.ReadFile(templatePath)
-	if err != nil {
-		return fmt.Errorf("failed to read template %s: %w", templatePath, err)
-	}
+	// // Read template from embedded filesystem
+	// content, err := templateFS.ReadFile(templatePath)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to read template %s: %w", templatePath, err)
+	// }
 
-	// Parse and execute template
-	tmpl, err := template.New(filepath.Base(templatePath)).Parse(string(content))
-	if err != nil {
-		return fmt.Errorf("failed to parse template %s: %w", templatePath, err)
-	}
+	// // Parse and execute template
+	// tmpl, err := template.New(filepath.Base(templatePath)).Parse(string(content))
+	// if err != nil {
+	// 	return fmt.Errorf("failed to parse template %s: %w", templatePath, err)
+	// }
 
-	// Create output file
-	outputFile, err := os.Create(outputPath)
-	if err != nil {
-		return fmt.Errorf("failed to create output file %s: %w", outputPath, err)
-	}
-	defer outputFile.Close()
+	// // Create output file
+	// outputFile, err := os.Create(outputPath)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create output file %s: %w", outputPath, err)
+	// }
+	// defer outputFile.Close()
 
-	// Execute template with data
-	if err := tmpl.Execute(outputFile, project); err != nil {
-		return fmt.Errorf("failed to execute template %s: %w", templatePath, err)
-	}
+	// // Execute template with data
+	// if err := tmpl.Execute(outputFile, project); err != nil {
+	// 	return fmt.Errorf("failed to execute template %s: %w", templatePath, err)
+	// }
 	return nil
 }

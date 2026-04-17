@@ -35,8 +35,8 @@ func GetConfigPath() (string, error) {
 			Templates: map[string]types.Template{
 				"default": {
 					Description: "A default template with Go, React, Tailwind, and Vite",
-					Repo:        "github.com/skooma-cli/skooma-default-template",
 					Author:      "Mark Rodgers <mark@marknrodgers.com>",
+					RepoURL:     "github.com/skooma-cli/skooma-default-template",
 				},
 			},
 		}
@@ -82,6 +82,7 @@ func GetConfig() (*types.Config, error) {
 	return &config, nil
 }
 
+// SaveConfig writes the configuration to disk.
 func SaveConfig(config *types.Config) error {
 	configPath, err := GetConfigPath()
 	if err != nil {
@@ -106,6 +107,7 @@ func SaveConfig(config *types.Config) error {
 	return nil
 }
 
+// Open opens the configuration file in the user's default editor.
 func Open() error {
 	configPath, err := GetConfigPath()
 	if err != nil {

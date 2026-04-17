@@ -111,7 +111,7 @@ You'll be prompted for:
 - **Template** — Choose from available template repositories
 - **Repository URL** — e.g. `github.com/user/repo`
 - **Author** — e.g. `Name <email@example.com>`
-- **Database** — Flat File, Microsoft SQL, or PostgreSQL
+- **Database** — Flat File, Microsoft SQL Server, or PostgreSQL
 
 ### Non-interactive mode
 
