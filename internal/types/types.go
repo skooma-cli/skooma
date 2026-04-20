@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -128,4 +131,34 @@ func ParseRepository(s string) Repository {
 	}
 
 	return r
+}
+
+// Download clones the repository to the specified destination
+func (r Repository) Download(dest string) error {
+	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+		fmt.Printf("Directory %s already exists, skipping download.\n", dest)
+		return nil
+	}
+
+	cloneURL := r.String()
+	// Strip the @ref from the clone URL if it exists
+	if idx := strings.LastIndex(cloneURL, "@"); idx != -1 {
+		cloneURL = cloneURL[:idx]
+	}
+
+	args := []string{"clone", "--depth=1"}
+	if r.Ref != "" && r.Ref != "latest" {
+		args = append(args, "--branch", r.Ref)
+	}
+	args = append(args, cloneURL, dest)
+
+	cmd := exec.Command("git", args...)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return os.RemoveAll(filepath.Join(dest, ".git"))
 }

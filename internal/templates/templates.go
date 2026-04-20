@@ -3,6 +3,8 @@ package templates
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 
 	"github.com/skooma-cli/skooma/internal/config"
 	"github.com/skooma-cli/skooma/internal/types"
@@ -61,6 +63,53 @@ func RemoveTemplate(name string) error {
 		return err
 	}
 
+	// Get template
+	t, err := GetTemplateByName(name)
+	if err != nil {
+		return err
+	}
+	if t == nil {
+		return errors.New("template not found")
+	}
+
+	// Delete template from config
 	delete(cfg.Templates, name)
-	return config.SaveConfig(cfg)
+	err = config.SaveConfig(cfg)
+	if err != nil {
+		return err
+	}
+
+	// TODO: check if any other templates use the same repo/ref, if so skip deleting the directory
+
+	// Get template directory
+	templateDir, err := GetTemplateDirectory(*t)
+	if err != nil {
+		return err
+	}
+
+	// Delete template directory
+	err = os.RemoveAll(templateDir)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetTemplateDirectory returns the path to the templates directory for a given template.
+func GetTemplateDirectory(template types.Template) (string, error) {
+	repo := template.RepoURL
+
+	if repo.IsEmpty() {
+		return "", errors.New("template repository URL is required")
+	}
+
+	// Get the directory where templates are stored
+	templatesDir, err := config.GetTemplatesDirectory()
+	if err != nil {
+		return "", err
+	}
+
+	// Return the path to the templates directory for a given template
+	return filepath.Join(templatesDir, repo.Owner, repo.Name, repo.Ref), nil
 }

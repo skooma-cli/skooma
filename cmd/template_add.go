@@ -129,6 +129,18 @@ var templateAddCmd = &cobra.Command{
 			log.Fatalf("❌ Template '%s' already exists\n", template.Name)
 		}
 
+		// Get template directory
+		templateDir, err := templates.GetTemplateDirectory(template)
+		if err != nil {
+			log.Fatalf("❌ Error getting template directory: %v\n", err)
+		}
+
+		// Download repository
+		err = template.RepoURL.Download(templateDir)
+		if err != nil {
+			log.Fatalf("❌ Error downloading template: %v\n", err)
+		}
+
 		// Add the template
 		err = templates.AddTemplate(template)
 		if err != nil {

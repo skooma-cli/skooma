@@ -14,7 +14,7 @@ import (
 // Init creates the default config file and templates directory if they don't exist.
 func Init() error {
 	// Get Skooma directory, create if it doesn't exist
-	skoomaDir, err := getSkoomaDirectory()
+	skoomaDir, err := GetSkoomaDirectory()
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func Init() error {
 	}
 
 	// Get Skooma config, create if it doesn't exist
-	configPath, err := getConfigPath()
+	configPath, err := GetConfigPath()
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func Init() error {
 	}
 
 	// Get templates directory, create if it doesn't exist
-	templatesDir, err := getTemplatesDirectory()
+	templatesDir, err := GetTemplatesDirectory()
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func Init() error {
 
 // GetConfig retrieves the config object from the config file
 func GetConfig() (*types.Config, error) {
-	configPath, err := getConfigPath()
+	configPath, err := GetConfigPath()
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func GetConfig() (*types.Config, error) {
 
 // SaveConfig writes the configuration to disk.
 func SaveConfig(config *types.Config) error {
-	configPath, err := getConfigPath()
+	configPath, err := GetConfigPath()
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func SaveConfig(config *types.Config) error {
 
 // OpenConfigInEditor opens the configuration file in the user's default editor.
 func OpenConfigInEditor() error {
-	configPath, err := getConfigPath()
+	configPath, err := GetConfigPath()
 	if err != nil {
 		return err
 	}
@@ -148,8 +148,8 @@ func OpenConfigInEditor() error {
 	return cmd.Start()
 }
 
-// getSkoomaDirectory returns the path to the Skooma directory
-func getSkoomaDirectory() (string, error) {
+// GetSkoomaDirectory returns the path to the Skooma directory
+func GetSkoomaDirectory() (string, error) {
 	userConfigDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -158,9 +158,9 @@ func getSkoomaDirectory() (string, error) {
 	return filepath.Join(userConfigDir, "skooma"), nil
 }
 
-// getConfigPath returns the path to the Skooma config file
-func getConfigPath() (string, error) {
-	skoomaDir, err := getSkoomaDirectory()
+// GetConfigPath returns the path to the Skooma config file
+func GetConfigPath() (string, error) {
+	skoomaDir, err := GetSkoomaDirectory()
 	if err != nil {
 		return "", err
 	}
@@ -168,9 +168,9 @@ func getConfigPath() (string, error) {
 	return filepath.Join(skoomaDir, "config.json"), nil
 }
 
-// getTemplatesDirectory returns the path to the Skooma templates directory
-func getTemplatesDirectory() (string, error) {
-	skoomaDir, err := getSkoomaDirectory()
+// GetTemplatesDirectory returns the path to the Skooma templates directory
+func GetTemplatesDirectory() (string, error) {
+	skoomaDir, err := GetSkoomaDirectory()
 	if err != nil {
 		return "", err
 	}
