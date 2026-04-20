@@ -135,7 +135,7 @@ var templateAddCmd = &cobra.Command{
 			log.Fatalf("❌ Error getting template directory: %v\n", err)
 		}
 
-		// Download repository
+		// Download template from git repository
 		err = template.RepoURL.Download(templateDir)
 		if err != nil {
 			log.Fatalf("❌ Error downloading template: %v\n", err)

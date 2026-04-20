@@ -135,6 +135,11 @@ func ParseRepository(s string) Repository {
 
 // Download clones the repository to the specified destination
 func (r Repository) Download(dest string) error {
+	fmt.Println("---------------------------------------------------------")
+	fmt.Printf("Downloading template from %s\n", r.String())
+	fmt.Printf("Destination: %s\n", dest)
+	fmt.Println("---------------------------------------------------------")
+
 	if _, err := os.Stat(dest); !os.IsNotExist(err) {
 		fmt.Printf("Directory %s already exists, skipping download.\n", dest)
 		return nil

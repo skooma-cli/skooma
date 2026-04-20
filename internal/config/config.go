@@ -38,7 +38,7 @@ func Init() error {
 				"default": {
 					Name:        "default",
 					Description: "A default template with Go, React, Tailwind, and Vite",
-					RepoURL:     types.ParseRepository("github.com/skooma-cli/skooma-default-template@latest"),
+					RepoURL:     types.ParseRepository("github.com/skooma-cli/skooma-template-default@latest"),
 					Author:      "Mark Rodgers <mark@marknrodgers.com>",
 				},
 			},

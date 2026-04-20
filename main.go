@@ -8,7 +8,9 @@ import (
 	"github.com/skooma-cli/skooma/internal/config"
 )
 
-var version = "0.2.0-dev"
+// TODO: implement proper logger
+
+var version = "0.2.0"
 
 func main() {
 	os.Setenv("SKOOMA_VERSION", version)
