@@ -1,4 +1,4 @@
-// CLI to scaffold fullstack SPAs with Go, TypeScript, React, Tailwind, and Vite.
+// Skooma is a platform-agnostic CLI tool that scaffolds projects in seconds from user-defined template repositories. Any language, any framework, any stack.
 package main
 
 import (
@@ -8,7 +8,7 @@ import (
 	"github.com/skooma-cli/skooma/internal/config"
 )
 
-var version = "0.2.0"
+var version = "0.2.0-dev"
 
 func main() {
 	os.Setenv("SKOOMA_VERSION", version)
