@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
 )
@@ -28,6 +29,7 @@ func Init() error {
 
 	l = log.NewWithOptions(f, log.Options{
 		ReportTimestamp: true,
+		TimeFormat:      time.RFC3339,
 		ReportCaller:    true,
 		CallerOffset:    1,
 		Level:           log.DebugLevel,
