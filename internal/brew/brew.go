@@ -12,10 +12,52 @@ import (
 	"time"
 
 	"charm.land/huh/v2"
+	"github.com/skooma-cli/skooma/internal/logger"
 	"github.com/skooma-cli/skooma/internal/templates"
 	"github.com/skooma-cli/skooma/internal/types"
 	"github.com/skooma-cli/skooma/internal/validators"
 )
+
+// ScaffoldProject scaffolds a new project with the given project data.
+func ScaffoldProject(project *types.ProjectData) error {
+	// Get current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	// Check if project root directory already exists before starting the brewing process
+	project.Directory = filepath.Join(cwd, project.Name)
+	if err = createProjectRoot(project.Directory); err != nil {
+		return fmt.Errorf("error creating project directory: %w", err)
+	}
+
+	// Get template directory
+	src, err := templates.GetTemplateDirectory(project.Template)
+	if err != nil {
+		return fmt.Errorf("failed to get template directory: %w", err)
+	}
+
+	// Download template repository
+	if err = templates.RepositoryDownload(&project.Template); err != nil {
+		return fmt.Errorf("error downloading template: %v\n", err)
+	}
+
+	// Copy all static files from the template directory to the project directory
+	if err = copyStaticFiles(src, project.Directory); err != nil {
+		return fmt.Errorf("error copying static files: %w", err)
+	}
+
+	// Process template files, replacing variables with project data
+	if err = processTemplateFiles(src, project.Directory, *project); err != nil {
+		return fmt.Errorf("error processing template files: %w", err)
+	}
+
+	// Scaffolding is too fast, add a delay for the 'brew' effect
+	time.Sleep(1 * time.Second)
+
+	return nil
+}
 
 func BuildTemplateVariableInputGroups(variables *[]types.TemplateConfigVariable) ([]*huh.Group, error) {
 	groups := []*huh.Group{}
@@ -66,62 +108,21 @@ func BuildTemplateVariableInputGroups(variables *[]types.TemplateConfigVariable)
 	return groups, nil
 }
 
-// ScaffoldProject scaffolds a new project with the given project data.
-func ScaffoldProject(project *types.ProjectData) error {
-	// Get current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %w", err)
-	}
-
-	// Check if project root directory already exists before starting the brewing process
-	project.Directory = filepath.Join(cwd, project.Name)
-	if err = createProjectRoot(project.Directory); err != nil {
-		return fmt.Errorf("error creating project directory: %w", err)
-	}
-
-	// Get template directory
-	src, err := templates.GetTemplateDirectory(project.Template)
-	if err != nil {
-		return fmt.Errorf("failed to get template directory: %w", err)
-	}
-
-	// Download template repository
-	if err = templates.RepositoryDownload(&project.Template); err != nil {
-		return fmt.Errorf("error downloading template: %v\n", err)
-	}
-
-	// Copy all static files from the template directory to the project directory
-	if err = copyStaticFiles(src, project.Directory); err != nil {
-		return fmt.Errorf("error copying static files: %w", err)
-	}
-
-	// Process template files, replacing variables with project data
-	if err = processTemplateFiles(src, project.Directory, *project); err != nil {
-		return fmt.Errorf("error processing template files: %w", err)
-	}
-
-	// Scaffolding is too fast, add a delay for the 'brew' effect
-	time.Sleep(1 * time.Second)
-
-	return nil
-}
-
 func createProjectRoot(dst string) error {
-	// TODO: this should error out if directory already exists
 	if _, err := os.Stat(dst); os.IsNotExist(err) {
+		logger.Debug("Creating directory", "path", dst)
 		err = os.MkdirAll(dst, 0755)
 		if err != nil {
 			return err
 		}
+	} else {
+		logger.Fatal("Project directory already exists", "path", dst)
 	}
 	return nil
 }
 
 func copyStaticFiles(src, dst string) error {
-	// fmt.Println(src)
-	// fmt.Println(dst)
-	// fmt.Println("---------------------------------------")
+	// logger.Debug("Copying static files", "src", src, "dst", dst)
 
 	filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -139,7 +140,7 @@ func copyStaticFiles(src, dst string) error {
 
 		// Create directory in destination directory
 		if d.IsDir() {
-			// fmt.Printf("Creating directory: %s\n", dstPath)
+			logger.Debug("Creating directory", "path", dstPath)
 			if err := os.MkdirAll(dstPath, 0755); err != nil {
 				return err
 			}
@@ -157,7 +158,7 @@ func copyStaticFiles(src, dst string) error {
 			return nil
 		}
 
-		// fmt.Printf("Copying file: %s\n", dstPath)
+		logger.Debug("Copying file", "path", dstPath)
 
 		// Read source file
 		in, err := os.Open(path)
@@ -185,9 +186,6 @@ func copyStaticFiles(src, dst string) error {
 }
 
 func processTemplateFiles(src, dst string, project types.ProjectData) error {
-	// Parsing variables
-	// fmt.Println("Parsing template variables...")
-
 	// Build base variables map with your hardcoded fields
 	variables := map[string]any{
 		"Name":         project.Name,
@@ -239,7 +237,7 @@ func processTemplateFiles(src, dst string, project types.ProjectData) error {
 		defer f.Close()
 
 		// Process template file, replacing variables with project data
-		// fmt.Printf("Processing template file: %s\n", dstPath)
+		logger.Debug("Processing template file", "path", dstPath)
 		if err := tmpl.Execute(f, variables); err != nil {
 			return fmt.Errorf("executing template: %w", err)
 		}

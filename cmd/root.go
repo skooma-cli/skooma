@@ -20,6 +20,6 @@ func Execute() {
 
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		logger.Fatal("Error executing command", "error", err)
 	}
 }

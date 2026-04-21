@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/skooma-cli/skooma/internal/logger"
 	"github.com/skooma-cli/skooma/internal/types"
 )
 
@@ -122,39 +123,37 @@ func SaveConfig(config *types.Config) error {
 	return nil
 }
 
-// OpenConfigInEditor opens the configuration file in the user's default editor.
-func OpenConfigInEditor() error {
+// ViewConfig opens the configuration file in the user's default pager.
+func ViewConfig() error {
 	configPath, err := GetConfigPath()
 	if err != nil {
 		return err
 	}
 
-	var cmd *exec.Cmd
-
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", "", configPath)
-	case "darwin":
-		cmd = exec.Command("open", configPath)
-	default:
-		// Try editor environment variables, fall back to xdg-open
-		if editor := getEditor(); editor != "" {
-			cmd = exec.Command(editor, configPath)
-		} else {
-			cmd = exec.Command("xdg-open", configPath)
+	pager := os.Getenv("PAGER")
+	if pager == "" {
+		switch runtime.GOOS {
+		case "windows":
+			pager = "more"
+		default:
+			pager = "less"
 		}
 	}
 
-	return cmd.Start()
-}
-
-func GetLogFilePath() (string, error) {
-	skoomaDir, err := GetSkoomaDirectory()
+	file, err := os.Open(configPath)
 	if err != nil {
-		return "", err
+		return err
 	}
+	defer file.Close()
 
-	return filepath.Join(skoomaDir, "skooma.log"), nil
+	cmd := exec.Command(pager)
+	cmd.Stdin = file
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	logger.Debug("Opening config file", "cmd", cmd.String())
+
+	return cmd.Run()
 }
 
 // GetSkoomaDirectory returns the path to the Skooma directory
@@ -185,14 +184,4 @@ func GetTemplatesDirectory() (string, error) {
 	}
 
 	return filepath.Join(skoomaDir, "templates"), nil
-}
-
-// getEditor returns the first available editor from environment variables
-func getEditor() string {
-	for _, env := range []string{"EDITOR", "VISUAL"} {
-		if editor := os.Getenv(env); editor != "" {
-			return editor
-		}
-	}
-	return ""
 }

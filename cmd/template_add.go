@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"text/tabwriter"
 
 	"charm.land/huh/v2"
+	"github.com/skooma-cli/skooma/internal/logger"
 	"github.com/skooma-cli/skooma/internal/sanitize"
 	"github.com/skooma-cli/skooma/internal/templates"
 	"github.com/skooma-cli/skooma/internal/types"
@@ -47,7 +47,7 @@ var templateAddCmd = &cobra.Command{
 			))
 		} else {
 			if err := validators.All(templateNameValidators...)(templateAddTemplateNameArg); err != nil {
-				log.Fatalf("❌ Invalid template name: %v\n", err)
+				logger.Fatal("Invalid template name", "error", err)
 			}
 		}
 
@@ -65,7 +65,7 @@ var templateAddCmd = &cobra.Command{
 			))
 		} else {
 			if err := validators.All(descriptionValidators...)(templateAddDescriptionFlag); err != nil {
-				log.Fatalf("❌ Invalid description: %v\n", err)
+				logger.Fatal("Invalid description", "error", err)
 			}
 		}
 
@@ -85,7 +85,7 @@ var templateAddCmd = &cobra.Command{
 			))
 		} else {
 			if err := validators.All(repoUrlValidators...)(templateAddRepoUrlFlag); err != nil {
-				log.Fatalf("❌ Invalid repository URL: %v\n", err)
+				logger.Fatal("Invalid repository URL", "error", err)
 			}
 		}
 
@@ -103,7 +103,7 @@ var templateAddCmd = &cobra.Command{
 			))
 		} else {
 			if err := validators.All(authorValidators...)(templateAddAuthorFlag); err != nil {
-				log.Fatalf("❌ Invalid author name: %v\n", err)
+				logger.Fatal("Invalid author name", "error", err)
 			}
 		}
 
@@ -112,7 +112,7 @@ var templateAddCmd = &cobra.Command{
 		// Run the form to collect user input
 		err := form.Run()
 		if err != nil {
-			log.Fatalf("❌ Failed to run form: %v\n", err)
+			logger.Fatal("Failed to run form", "error", err)
 		}
 
 		// Build project data struct to pass to the brewing process
@@ -126,19 +126,19 @@ var templateAddCmd = &cobra.Command{
 		// Check if template already exists before adding
 		t, err := templates.GetTemplateByName(template.Name)
 		if err == nil && t != nil {
-			log.Fatalf("❌ Template '%s' already exists\n", template.Name)
+			logger.Fatal(fmt.Sprintf("Template '%s' already exists", template.Name))
 		}
 
 		// Download template from git repository
 		err = templates.RepositoryDownload(&template)
 		if err != nil {
-			log.Fatalf("❌ Error downloading template: %v\n", err)
+			logger.Fatal("Error downloading template", "error", err)
 		}
 
 		// Add the template
 		err = templates.AddTemplate(template)
 		if err != nil {
-			log.Fatalf("❌ Error adding template: %v\n", err)
+			logger.Fatal("Error adding template", "error", err)
 		}
 
 		fmt.Printf("\n✅ '%s' has been added successfully!\n\n", template.Name)

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/skooma-cli/skooma/internal/config"
+	"github.com/skooma-cli/skooma/internal/logger"
 	"github.com/skooma-cli/skooma/internal/types"
 )
 
@@ -137,10 +138,7 @@ func RepositoryDownload(t *types.Template) error {
 		return fmt.Errorf("error getting template directory: %w", err)
 	}
 
-	// fmt.Println("---------------------------------------------------------")
-	// fmt.Printf("Downloading template from %s\n", t.RepoURL.String())
-	// fmt.Printf("Destination: %s\n", dest)
-	// fmt.Println("---------------------------------------------------------")
+	logger.Debug("Downloading template", "template", t.Name, "repo", t.RepoURL.String(), "dest", dest)
 
 	cloneURL := t.RepoURL.String()
 	// Strip the @ref from the clone URL if it exists
@@ -155,7 +153,7 @@ func RepositoryDownload(t *types.Template) error {
 	args = append(args, cloneURL, dest)
 
 	if _, err := os.Stat(dest); !os.IsNotExist(err) {
-		// fmt.Printf("Directory %s already exists, skipping download.\n", dest)
+		logger.Debug("Directory already exists, skipping download", "path", dest)
 	} else {
 		cmd := exec.Command("git", args...)
 		cmd.Stdout = os.Stdout

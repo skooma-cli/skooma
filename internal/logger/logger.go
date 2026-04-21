@@ -2,16 +2,21 @@
 package logger
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/skooma-cli/skooma/internal/config"
 )
 
 var l *log.Logger
 
+// Init initializes the logger.
 func Init() error {
-	logPath, err := config.GetLogFilePath()
+	logPath, err := GetLogFilePath()
 	if err != nil {
 		return err
 	}
@@ -24,14 +29,68 @@ func Init() error {
 	l = log.NewWithOptions(f, log.Options{
 		ReportTimestamp: true,
 		ReportCaller:    true,
+		CallerOffset:    1,
 		Level:           log.DebugLevel,
 	})
 
 	return nil
 }
 
-func Info(msg string, keyvals ...any)  { l.Info(msg, keyvals...) }
+// Info logs an info message.
+func Info(msg string, keyvals ...any) { l.Info(msg, keyvals...) }
+
+// Debug logs a debug message.
 func Debug(msg string, keyvals ...any) { l.Debug(msg, keyvals...) }
-func Warn(msg string, keyvals ...any)  { l.Warn(msg, keyvals...) }
+
+// Warn logs a warning message.
+func Warn(msg string, keyvals ...any) { l.Warn(msg, keyvals...) }
+
+// Error logs an error message.
 func Error(msg string, keyvals ...any) { l.Error(msg, keyvals...) }
-func Fatal(msg string, keyvals ...any) { l.Fatal(msg, keyvals...) }
+
+// Fatal logs a fatal message and exits.
+func Fatal(msg string, keyvals ...any) {
+	fmt.Printf("❌ %s\n\n%s\n\nRun `skooma log` for more details\n", msg, strings.Repeat("-", 80))
+	l.Fatal(msg, keyvals...)
+}
+
+// GetLogFilePath returns the path to the log file.
+func GetLogFilePath() (string, error) {
+	userConfigDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(userConfigDir, "skooma", "skooma.log"), nil
+}
+
+// ViewLog opens the log file in the user's default pager.
+func ViewLog() error {
+	logPath, err := GetLogFilePath()
+	if err != nil {
+		return err
+	}
+
+	pager := os.Getenv("PAGER")
+	if pager == "" {
+		switch runtime.GOOS {
+		case "windows":
+			pager = "more"
+		default:
+			pager = "less"
+		}
+	}
+
+	file, err := os.Open(logPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	cmd := exec.Command(pager)
+	cmd.Stdin = file
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}

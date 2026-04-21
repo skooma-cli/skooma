@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"text/tabwriter"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"charm.land/huh/v2"
 	"github.com/briandowns/spinner"
 	"github.com/skooma-cli/skooma/internal/brew"
+	"github.com/skooma-cli/skooma/internal/logger"
 	"github.com/skooma-cli/skooma/internal/sanitize"
 	"github.com/skooma-cli/skooma/internal/templates"
 	"github.com/skooma-cli/skooma/internal/types"
@@ -55,14 +55,14 @@ the necessary files for a basic project structure.`,
 			))
 		} else {
 			if err := validators.All(projectNameValidators...)(brewProjectNameArg); err != nil {
-				log.Fatalf("❌ Invalid project name: %v\n", err)
+				logger.Fatal("Invalid project name", "error", err)
 			}
 		}
 
 		// Load templates to build options for the template selection prompt
 		tpls, err := templates.GetTemplates()
 		if err != nil {
-			log.Fatalf("❌ Error loading templates: %v\n", err)
+			logger.Fatal("Error loading templates", "error", err)
 		}
 
 		// If no template was provided, prompt the user; otherwise validate the provided template name exists
@@ -78,7 +78,7 @@ the necessary files for a basic project structure.`,
 					Value(&brewTemplateFlag),
 			))
 		} else if _, ok := tpls[brewTemplateFlag]; !ok {
-			log.Fatalf("❌ Invalid template name: '%s'. Use 'skooma template ls' to see available templates.\n", brewTemplateFlag)
+			logger.Fatal(fmt.Sprintf("Invalid template name: '%s'. Use 'skooma template ls' to see available templates.", brewTemplateFlag))
 		}
 
 		// Validators for the repository URL input
@@ -96,7 +96,7 @@ the necessary files for a basic project structure.`,
 			))
 		} else {
 			if err := validators.All(repoUrlValidators...)(brewRepoUrlFlag); err != nil {
-				log.Fatalf("❌ Invalid repository URL: %v\n", err)
+				logger.Fatal("Invalid repository URL", "error", err)
 			}
 		}
 
@@ -114,7 +114,7 @@ the necessary files for a basic project structure.`,
 			))
 		} else {
 			if err := validators.All(authorValidators...)(brewAuthorFlag); err != nil {
-				log.Fatalf("❌ Invalid author name: %v\n", err)
+				logger.Fatal("Invalid author name", "error", err)
 			}
 		}
 
@@ -123,24 +123,24 @@ the necessary files for a basic project structure.`,
 		// Run the form to collect user input
 		err = form.Run()
 		if err != nil {
-			log.Fatalf("❌ Failed to run form: %v\n", err)
+			logger.Fatal("Failed to run form", "error", err)
 		}
 
 		template, err := templates.GetTemplateByName(brewTemplateFlag)
 		if err != nil {
-			log.Fatalf("❌ Failed to get template: %v\n", err)
+			logger.Fatal("Failed to get template", "error", err)
 		}
 
 		templateGroups, err := brew.BuildTemplateVariableInputGroups(&template.Config.Variables)
 		if err != nil {
-			log.Fatalf("❌ Failed to build template variable input groups: %v\n", err)
+			logger.Fatal("Failed to build template variable input groups", "error", err)
 		}
 
 		if len(templateGroups) > 0 {
 			form = huh.NewForm(templateGroups...)
 			err = form.Run()
 			if err != nil {
-				log.Fatalf("❌ Failed to run form: %v\n", err)
+				logger.Fatal("Failed to run form", "error", err)
 			}
 		}
 
@@ -160,7 +160,7 @@ the necessary files for a basic project structure.`,
 		// Brew project
 		err = brew.ScaffoldProject(&project)
 		if err != nil {
-			log.Fatalf("❌ Failed to brew project\n\n%v\n", err)
+			logger.Fatal("Failed to brew project", "error", err)
 		}
 
 		// Stop spinner and print success message
