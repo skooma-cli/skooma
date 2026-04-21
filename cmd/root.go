@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"os"
+	"strings"
 
+	"github.com/skooma-cli/skooma/internal/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -14,10 +16,10 @@ var rootCmd = &cobra.Command{
 
 // Execute runs the root command, which is the entry point for the CLI application.
 func Execute() {
+	logger.Info("Command executed", "command", strings.Join(os.Args, " "))
+
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
-
-// func init() {}

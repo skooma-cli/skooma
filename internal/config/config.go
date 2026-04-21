@@ -148,6 +148,15 @@ func OpenConfigInEditor() error {
 	return cmd.Start()
 }
 
+func GetLogFilePath() (string, error) {
+	skoomaDir, err := GetSkoomaDirectory()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(skoomaDir, "skooma.log"), nil
+}
+
 // GetSkoomaDirectory returns the path to the Skooma directory
 func GetSkoomaDirectory() (string, error) {
 	userConfigDir, err := os.UserConfigDir()
